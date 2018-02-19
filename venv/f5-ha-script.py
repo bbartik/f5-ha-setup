@@ -1,4 +1,4 @@
-# This file was generated on: 2018-02-16 15:10:16.108000
+# This file was generated on: 2018-02-19 05:01:36.838000
 
 import json
 import requests
@@ -141,6 +141,7 @@ def config_sync(bigips):
     else:
         print ('    Sorry something went wrong')
 
+
 # PHASE 1 LOOP: THIS RUNS THE FUNCTIONS ABOVE FOR EACH BIG-IP
 
 
@@ -149,7 +150,6 @@ def setup_ha_bigip(bigip,bigips,float):
     create_ha_self(bigips)
     create_floats(bigips)
     config_sync(bigips)
-
 
 
 # PHASE 2 FUNCTIONS: THESE ARE CALLED FOR BIGIP-1 ONLY
@@ -198,7 +198,9 @@ def init_sync_dg1(bigip,bigips):
     post = bigip.post("https://" + address + "/mgmt/tm/cm/config-sync",data=json.dumps(payload))
     print (post.text)
 
+
 # Main iteration loop to cycle thorugh the list if BIG-IPs
+
 
 for node in bigips:
     print ("Working on F5 number " + str(node["node"]))
@@ -215,7 +217,9 @@ for node in bigips:
             print ("  Please configure Radius servers to use Pools before continuing with HA")
         setup_ha_bigip(bigip,node,float)
 
+
 # Put VIPs in floating traffic group
+
 
 def update_vips(bigip,bigips):
     print ("Getting list of virtual address...")
@@ -228,11 +232,11 @@ def update_vips(bigip,bigips):
         payload["trafficGroup"] = "/Common/traffic-group-1"
         payload["floating"] = "enabled"
         put_resp = bigip.put("https://" + address + "/mgmt/tm/ltm/virtual-address/~Common~" + vipname,data=json.dumps(payload)).text
-        put_resp = json.loads(x)
+        put_resp = json.loads(put_resp)
         print ("VIP " + put_resp["name"] + " has been updated")
     print ("VIP update complete")
 
-'''
+
 for node in bigips:
     if node["node"] == 1:
         create_trust(bigip,node)
@@ -241,4 +245,3 @@ for node in bigips:
         init_sync_dg1(bigip, node)
         update_vips(bigip,node)
         print ("HA setup complete!")
-'''

@@ -72,23 +72,31 @@ def radius_check(bigip,bigips):
             count = count + 1
     return count
 
-# These are the create methods that setup the HA VLAN, Self IPs and Floats
+def resp_func(resp):
+    resp_text = json.loads(resp.text)
+    code = str(resp.status_code)
+    if code != "200":
+        print ("    HTTP Error " + str(resp.status_code) + ": " + resp_text["message"])
+    elif code == "200":
+        print ("    HTTP OK: " + " " + resp_text["name"] + " has been created")
+    else:
+        print ('    Sorry something went wrong')
+
+
+# PHASE 1 FUNCTIONS: THESE ARE RUN FOR EACH BIGIP
+# TO SETUP VLANS, SELF-IP AND FLOATING IPS
 
 def create_ha_vlan(bigips):
-    print ("Creating HA VLAN")
+    print ("  Creating HA VLAN")
     payload = {}
     payload['name'] = bigips["ha_vlan_name"]
     payload['interfaces'] = [{"name":bigips["ha_interface"],"tagged":False}]
     address = bigips["address"]
     resp = bigip.post("https://" + address + "/mgmt/tm/net/vlan",data=json.dumps(payload))
-    resp_text = json.loads(resp.text)
-    if resp.status_code != "200":
-        print ("    Error " + str(resp.status_code) + ": " + resp_text["message"])
-    else:
-        print ("    Vlan " + resp_text["name"] + " has been created")
+    resp_func(resp)
 
 def create_ha_self(bigips):
-    print ("Creating HA Self IP")
+    print ("  Creating HA Self IP")
     payload = {}
     payload['name'] = bigips["ha_self_name"]
     payload['address'] = bigips["ha_self_ip"]
@@ -96,27 +104,21 @@ def create_ha_self(bigips):
     payload['allow-service'] = ["default"]
     address = bigips["address"]
     resp = bigip.post("https://" + address + "/mgmt/tm/net/self",data=json.dumps(payload))
-    resp_text = json.loads(resp.text)
-    if resp.status_code != "200":
-        print ("    Error " + str(resp.status_code) + ": " + resp_text["message"])
-    else:
-        print ("    Self IP " + resp_text["address"] + " on VLAN " + resp_text["vlan"] + " has been created")
+    resp_func(resp)
 
+def create_floats(bigips):
+    print ("  Creating Floating IPs")
+    for float_payload in float:
+        float_payload['allow-service'] = ["default"]
+        float_payload['floating'] = "enabled"
+        float_payload['trafficGroup'] = "traffic-group-1"
+        address = bigips["address"]
+        resp = bigip.post("https://" + address + "/mgmt/tm/net/self",data=json.dumps(float_payload))
+        resp_func(resp)
 
-def create_floats(float_payload,bigips):
-    print ("Creating Floating IPs")
-    float_payload['allow-service'] = ["default"]
-    float_payload['floating'] = "enabled"
-    float_payload['trafficGroup'] = "traffic-group-1"
-    address = bigips["address"]
-    resp = bigip.post("https://" + address + "/mgmt/tm/net/self",data=json.dumps(float_payload))
-    resp_text = json.loads(resp.text)
-    if resp.status_code != "200":
-        print ("    Error " + str(resp.status_code) + ": " + resp_text["message"])
-    else:
-        print ("    Floating IP " + resp_text["address"] + " on VLAN " + resp_text["vlan"] + " has been created")
 
 # Configure ConfigSync, Mirroring and Failover parameters
+
 
 def config_sync(bigips):
     print ("Configuring sync parameters")
@@ -128,19 +130,29 @@ def config_sync(bigips):
     payload["unicastAddress"] = [{"effectiveIp": syncIp,"effectivePort":1026,"ip": syncIp,"port":1026}]
     address = bigips["address"]
     name = bigips["name"]
-    post = bigip.patch("https://" + address + "/mgmt/tm/cm/device/~Common~" + name,data=json.dumps(payload))
-    post = json.loads(post)
+    resp = bigip.patch("https://" + address + "/mgmt/tm/cm/device/~Common~" + name,data=json.dumps(payload))
+    resp_text = json.loads(resp.text)
+    code = str(resp.status_code)
+    if code != "200":
+        print ("    HTTP Error " + str(resp.status_code) + ": " + resp_text["message"])
+    elif code == "200":
+        print ("    HTTP OK: " + "ConfigSync parameters have been configured")
+    else:
+        print ('    Sorry something went wrong')
 
-# Setup functions that kickoff the create methods
+
+# PHASE 1 LOOP: THIS RUNS THE FUNCTIONS ABOVE FOR EACH BIG-IP
+
 
 def setup_ha_bigip(bigip,bigips,float):
     create_ha_vlan(bigips)
     create_ha_self(bigips)
-    for float_payload in float:
-        create_floats(float_payload,bigips)
+    create_floats(bigips)
     config_sync(bigips)
 
-# Create the device trust and groups and sync, these are called for bigip-1
+
+# PHASE 2 FUNCTIONS: THESE ARE CALLED FOR BIGIP-1 ONLY
+
 
 def create_trust(bigip,bigips):
     print ("Creating HA pair now...")
@@ -185,7 +197,9 @@ def init_sync_dg1(bigip,bigips):
     post = bigip.post("https://" + address + "/mgmt/tm/cm/config-sync",data=json.dumps(payload))
     print (post.text)
 
+
 # Main iteration loop to cycle thorugh the list if BIG-IPs
+
 
 for node in bigips:
     print ("Working on F5 number " + str(node["node"]))
@@ -199,10 +213,12 @@ for node in bigips:
         setup_ha_bigip(bigip,node,float)
     elif node["node"] == 1:
         if radius_check(bigip,node) > 0:
-            print ("Please configure Radius servers to use Pools before continuing with HA")
+            print ("  Please configure Radius servers to use Pools before continuing with HA")
         setup_ha_bigip(bigip,node,float)
 
+
 # Put VIPs in floating traffic group
+
 
 def update_vips(bigip,bigips):
     print ("Getting list of virtual address...")
@@ -215,9 +231,10 @@ def update_vips(bigip,bigips):
         payload["trafficGroup"] = "/Common/traffic-group-1"
         payload["floating"] = "enabled"
         put_resp = bigip.put("https://" + address + "/mgmt/tm/ltm/virtual-address/~Common~" + vipname,data=json.dumps(payload)).text
-        put_resp = json.loads(x)
+        put_resp = json.loads(put_resp)
         print ("VIP " + put_resp["name"] + " has been updated")
     print ("VIP update complete")
+
 
 for node in bigips:
     if node["node"] == 1:
