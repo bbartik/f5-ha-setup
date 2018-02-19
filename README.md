@@ -14,18 +14,18 @@ This project helps setup a secondary F5 as an HA pair. Each F5 must already have
 ## Modifying the number of Floating IPs:
 
 There is a dictionary called float like this:
-
+'''
 float = []
 float.append({"name":"Internal-Float","address":"{{ float_internal }}","vlan":"internal"})
 float.append({"name":"DMZ-Float","address":"{{ float_dmz }}","vlan":"dmz"})
-
+'''
 If you have more VLANs than this just add a new line to append the floating IPs and then update the f5vars.csv with the name and value:
 
 Example:
-
+'''
 float = []
 float.append({"name":"Internal-Float","address":"{{ float_internal }}","vlan":"internal"})
 float.append({"name":"DMZ-Float","address":"{{ float_dmz }}","vlan":"dmz"})
 float.append({"name":"DMZ2-Float","address":"{{ float_dmz2 }}","vlan":"dmz2"})
-
+'''
 Then just add the column and value to the f5vars.csv file.
