@@ -19,7 +19,7 @@ float = []
 float.append({"name":"Internal-Float","address":"{{ float_internal }}","vlan":"internal"})
 float.append({"name":"DMZ-Float","address":"{{ float_dmz }}","vlan":"dmz"})
 
-If you have more VLANs than this just add a newline to append the floating IPs and then update the f5vars.csv with the name and value:
+If you have more VLANs than this just add a new line to append the floating IPs and then update the f5vars.csv with the name and value:
 
 Example:
 
