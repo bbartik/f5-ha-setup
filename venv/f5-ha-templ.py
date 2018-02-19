@@ -4,7 +4,9 @@ import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+
 # This is for json and request connections
+
 
 bigip1_address = '{{ b1_addr }}'
 bigip1_name = '{{ b1_name }}'
@@ -16,7 +18,9 @@ ha_vlan_name = '{{ ha_vname }}'
 ha_interface = '{{ ha_intf }}'
 ha_self_name = '{{ ha_self }}'
 
+
 # Create two BIG-IP dictionaries and then make a list of them for iterating through setup
+
 
 bigip1 = {
     "node" : 1,
@@ -50,13 +54,17 @@ bigip2 = {
 
 bigips = [bigip1,bigip2]
 
+
 # Create a floating IP list of objects, if more VLANs exists, add floats to this list
+
 
 float = []
 float.append({"name":"Internal-Float","address":"{{ float_internal }}","vlan":"internal"})
 float.append({"name":"DMZ-Float","address":"{{ float_dmz }}","vlan":"dmz"})
 
+
 # Check to see if AAA is using direct or Pool method, stop if direct
+
 
 def get_radius_list(bigip,bigips):
     address = bigips["address"]
@@ -85,6 +93,7 @@ def resp_func(resp):
 
 # PHASE 1 FUNCTIONS: THESE ARE RUN FOR EACH BIGIP
 # TO SETUP VLANS, SELF-IP AND FLOATING IPS
+
 
 def create_ha_vlan(bigips):
     print ("  Creating HA VLAN")
